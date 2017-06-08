@@ -6,12 +6,12 @@
 
 def find_t50(input_los):
     import astroML.resample
-    import andrew_tools.simple_tools
+    import simple_tools
     from astropy.cosmology import FlatLambdaCDM
 
     cosmo = FlatLambdaCDM(H0=71.0,Om0=0.266)
     a_bins = np.linspace(0.0,1.0,1000)
-    T_bins = [cosmo.age(1.0/xx - 1.0).value for xx in a_bins]
+    T_bins = [cosmo.age(1.0/xx - 1.0) for xx in a_bins]
     T_bins_fix = [(T_bins[ii]+T_bins[ii+1])/2.0 for ii in range(len(T_bins)-1)]
     t_halfs_list = []
     if input_los.ndim==1:
@@ -33,12 +33,12 @@ def find_t50(input_los):
 
 def find_t90(input_los):
     import astroML.resample
-    import andrew_tools.simple_tools
+    import simple_tools
     from astropy.cosmology import FlatLambdaCDM
 
     cosmo = FlatLambdaCDM(H0=71.0,Om0=0.266)
     a_bins = np.linspace(0.0,1.0,1000)
-    T_bins = [cosmo.age(1.0/xx - 1.0).value for xx in a_bins]
+    T_bins = [cosmo.age(1.0/xx - 1.0) for xx in a_bins]
     T_bins_fix = [(T_bins[ii]+T_bins[ii+1])/2.0 for ii in range(len(T_bins)-1)]
     t_90_list = []
     if input_los.ndim==1:
@@ -60,12 +60,12 @@ def find_t90(input_los):
     
 def find_tq(input_los):
     import astroML.resample
-    import andrew_tools.simple_tools
+    import simple_tools
     from astropy.cosmology import FlatLambdaCDM
 
     cosmo = FlatLambdaCDM(H0=71.0,Om0=0.266)
     a_bins = np.linspace(0.0,1.0,1000)
-    T_bins = [cosmo.age(1.0/xx - 1.0).value for xx in a_bins]
+    T_bins = [cosmo.age(1.0/xx - 1.0) for xx in a_bins]
     T_bins_fix = [(T_bins[ii]+T_bins[ii+1])/2.0 for ii in range(len(T_bins)-1)]
     t_q_list = []
     if input_los.ndim==1:
@@ -86,8 +86,14 @@ def find_tq(input_los):
         return t_q_list
 
 def SFH_variance(hdf5_file,coverage_bins=[1,5,10,20,30,40,50,60,70,80,90,99],coverage_iterations=1000):
+    import numpy as np
+    import yt, h5py, re, os
+    from simple_tools import high_low_limit
     from random import sample
     from scipy.stats.mstats import chisquare
+    from astropy.cosmology import FlatLambdaCDM
+
+    cosmo = FlatLambdaCDM(H0=71.0,Om0=0.266)
 
     #SFH_variance
     #
@@ -97,6 +103,10 @@ def SFH_variance(hdf5_file,coverage_bins=[1,5,10,20,30,40,50,60,70,80,90,99],cov
     #INPUTS:
     # hdf5_file - the file to do the analysis on
     # coverage_bins - the percentages to do the calculation on
+
+    a_bins = np.linspace(0.0,1.0,1000)
+    T_bins = [cosmo.age(1.0/xx - 1.0) for xx in a_bins]
+    T_bins_fix = [(T_bins[ii]+T_bins[ii+1])/2.0 for ii in range(len(T_bins)-1)]
 
     coverage_list = coverage_bins
 
@@ -214,10 +224,20 @@ def SFH_variance(hdf5_file,coverage_bins=[1,5,10,20,30,40,50,60,70,80,90,99],cov
     return con_t_matrix
 
 
-def SFH_variance(hdf5_file,coverage_bins=[1,5,10,20,30,40,50,60,70,80,90,99],coverage_iterations=1000,bs_iterations=1000):
+def SFH_variance_bootstrap(hdf5_file,coverage_bins=[1,5,10,20,30,40,50,60,70,80,90,99],coverage_iterations=1000,bs_iterations=1000):
     '''fiducial scatter from SFH variation'''
+    import yt, h5py, re, os
+    from simple_tools import high_low_limit
+    import numpy as np
     from random import sample
     from scipy.stats.mstats import chisquare
+    from astropy.cosmology import FlatLambdaCDM
+
+    cosmo = FlatLambdaCDM(H0=71.0,Om0=0.266)
+
+    a_bins = np.linspace(0.0,1.0,1000)
+    T_bins = [cosmo.age(1.0/xx - 1.0) for xx in a_bins]
+    T_bins_fix = [(T_bins[ii]+T_bins[ii+1])/2.0 for ii in range(len(T_bins)-1)]
 
     coverage_list = coverage_bins
 
