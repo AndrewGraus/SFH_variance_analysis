@@ -402,3 +402,163 @@ def SFH_variance_bootstrap(hdf5_file,coverage_bins=[1,5,10,20,30,40,50,60,70,80,
     con_t_matrix[:,23] = bs_t_q_err_max
 
     return con_t_matrix
+
+def scatter_versus_random(hdf5_file,coverage_list=[1,2,3,4,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,99],coverage_trials=1000,random_trials=1000):
+    #The idea behind this module is to take a certain sample of "fields" and then count up the number of particles
+    #within these "fields" measuring taking the same number of particles randomly from all the los and then measure
+    #the parameters for the mock observations and the random sample.  The idea is that if the difference in the 
+    #parameters is not larger than the one from the random sample you really can't tell the difference from
+    #pure randomness
+    #
+    #Inputs:
+    #
+    #hdf5_file - hdf5 file containing the stellar distribution divided up into different lines of sight
+    #
+    #coverage_list - list of percent coverage values just the number of fields to randomly select
+    #
+    #coverage_trials - the number of trials to do for each value of the coverage list.  We want to do this
+    #                  in order to build up number statistics. Theoretically we could do this for every
+    #                  permutation of fields. which would be an N choose k problem this would be 100 for 1 
+    #                  field but 10^29 (!!) for 100 choose 50. Maybe do this in a way that's tied to the
+    #                  coverage fraction, in some way
+    #
+    #random_trails - number of trials to compare each field to in the random sample (how do I set this?)
+    #
+    #
+    #returns:
+    #
+    # N_particles - list containing the number of particles
+    # 
+    # coverage_fraction - list containing the coverage fraction of all the trials (this will probably be discrete to begin with)
+    # 
+    # t_<n>_error - the error for the number parameter 50 for t50, 90 for t90 and 100 for t100
+    #
+    # t_<n>_error_rand_<lim> - the error for the random sample. This has to be done multiple times, so the final results are given
+    #                          in terms of various limits.  For now 1-sigma low and high, min and max.
+    #
+    #
+
+    '''fiducial scatter from SFH variation'''
+    from random import sample
+    from scipy.stats.mstats import chisquare
+
+    SFH_data = h5py.File(hdf5_file)
+
+    #go ahead and calculate the t parameters for the total galaxy distribution in the fields
+
+    all_star_ages = []
+
+    for los_key in SFH_data['LOS_data'].keys():
+        '''dump all the particles into one list'''
+        target_los = SFH_data['LOS_data'][los_key]['age'][:]
+        [all_star_ages.append(xx) for xx in target_los]
+
+    total_age_hist, total_age_bin = np.histogram(all_star_ages,bins=a_bins,normed=False)
+    c_age_hist = np.cumsum(total_age_hist) 
+    total_sfh_norm = constructed_sfh/float(max(c_age_hist))
+    total_t_half = np.min([T_bins_fix[xx] for xx in range(len(total_sfh_norm)) if total_sfh_norm[xx]>=0.5])
+    total_t_90 = np.min([T_bins_fix[xx] for xx in range(len(total_sfh_norm)) if total_sfh_norm[xx]>=0.9])
+    total_t_q = np.min([T_bins_fix[xx] for xx in range(len(total_sfh_norm)) if total_sfh_norm[xx]>=0.99])
+
+    tot_half_low_list, tot_half_high_list = [],[]
+    tot_90_low_list, tot_90_high_list = [],[]
+    tot_q_low_list, tot_q_high_list = [],[]
+
+    tot_t_50s, tot_t_90s, tot_t_qs = [],[],[]
+    N_tot_list = []
+    coverage_tot_list = []
+    
+    for ii in coverage_list:
+        for jj in range(coverage_trials):
+            randint_list = sample(xrange(1,100), ii)
+            N_tot = 0
+            constructed_sfh = [0.0 for xx in range(len(T_bins_fix))]
+            constructed_sfh = np.asarray(constructed_sfh)
+            for kk in randint_list:
+                '''Now I need to grab the correct los'''
+                target_los = SFH_data['LOS_data']['los_'+str(kk)]['age'][:]
+                N_tot = N_tot + len(target_los)
+                age_hist, age_bin = np.histogram(target_los,bins=a_bins,normed=False)
+                c_age_hist = np.cumsum(age_hist) 
+                constructed_sfh = constructed_sfh+np.asarray(c_age_hist)
+            N_tot_list.append(N_tot)
+            coverage_tot_list.append(ii)
+            constructed_sfh_norm = constructed_sfh/float(max(constructed_sfh))
+            con_t_half_list = min([T_bins_fix[xx] for xx in range(len(constructed_sfh_norm)) if constructed_sfh_norm[xx]>=0.5])
+            con_t_90_list = min([T_bins_fix[xx] for xx in range(len(constructed_sfh_norm)) if constructed_sfh_norm[xx]>=0.9])
+            con_t_q_list = min([T_bins_fix[xx] for xx in range(len(constructed_sfh_norm)) if constructed_sfh_norm[xx]>=1.0])
+            tot_t_50s.append(con_t_half_list)
+            tot_t_90s.append(con_t_90_list)
+            tot_t_qs.append(con_t_q_list)
+        
+    #now for every N in N_tot_list calculate the average error for that number of particles
+
+    tot_random_t_half_min, tot_random_t_90_min, tot_random_t_q_min = [], [], []
+    tot_random_t_half_max, tot_random_t_90_max, tot_random_t_q_max = [], [], []
+    tot_random_t_half_med, tot_random_t_90_med, tot_random_t_q_med = [], [], []
+
+    tot_random_t_half_low, tot_random_t_90_low, tot_random_t_q_low = [], [], []
+    tot_random_t_half_high, tot_random_t_90_high, tot_random_t_q_high = [], [], []
+
+    #do the random trials for all the particle numbers in N_tot_list
+
+    for N_part in N_tot_list:
+        random_t_half, random_t_90, random_t_q = [], [], []
+        for kk in range(random_trails):
+            random_SFH = sample(all_star_ages, N_part)
+            age_hist, age_bin = np.histogram(random_SFH,bins=a_bins,normed=False)
+            c_age_hist = np.cumsum(age_hist)
+            c_sfh_norm = c_age_hist/float(max(c_age_hist))
+            con_t_half_list = [T_bins_fix[xx] for xx in range(len(c_age_hist)) if c_sfh_norm[xx]>=0.5]
+            con_t_90_list = [T_bins_fix[xx] for xx in range(len(c_age_hist)) if c_sfh_norm[xx]>=0.9]
+            con_t_q_list = [T_bins_fix[xx] for xx in range(len(c_age_hist)) if c_sfh_norm[xx]>=1.0]
+
+        
+            random_t_half.append(min(con_t_half_list))
+            random_t_90.append(min(con_t_90_list))
+            random_t_q.append(min(con_t_q_list))
+    
+        low, high, med = high_low_limit(random_t_half,0.68)
+        tot_random_t_half_low.append(low)
+        tot_random_t_half_high.append(high)
+        tot_random_t_half_med.append(med)
+        tot_random_t_half_min.append(min(random_t_half))
+        tot_random_t_half_max.append(max(random_t_half))
+    
+        low, high, med = high_low_limit(random_t_90,0.68)
+        tot_random_t_90_low.append(low)
+        tot_random_t_90_high.append(high)
+        tot_random_t_90_med.append(med)
+        tot_random_t_90_min.append(min(random_t_90))
+        tot_random_t_90_max.append(max(random_t_90))
+    
+        low, high, med = high_low_limit(random_t_q,0.68)
+        tot_random_t_q_low.append(low)
+        tot_random_t_q_high.append(high)
+        tot_random_t_q_med.append(med)
+        tot_random_t_q_min.append(min(random_t_q))
+        tot_random_t_q_max.append(max(random_t_q))
+
+    results_matrix = np.zeros(len(N_tot_list),20)
+    results_matrix[:,0] = N_tot_list
+    results_matrix[:,1] = coverage_tot_list
+    results_matrix[:,2] = total_t_half
+    results_matrix[:,3] = total_t_90
+    results_matrix[:,4] = total_t_q
+    results_matrix[:,5] = tot_t_50s
+    results_matrix[:,6] = tot_t_90s
+    results_matrix[:,7] = tot_t_qs
+    results_matrix[:,8] = tot_random_t_half_min
+    results_matrix[:,9] = tot_random_t_half_low
+    results_matrix[:,10] = tot_random_t_half_high
+    results_matrix[:,11] = tot_random_t_half_max
+    results_matrix[:,12] = tot_random_t_90_min
+    results_matrix[:,13] = tot_random_t_90_low
+    results_matrix[:,14] = tot_random_t_90_high
+    results_matrix[:,15] = tot_random_t_90_max
+    results_matrix[:,16] = tot_random_t_q_min
+    results_matrix[:,17] = tot_random_t_q_low
+    results_matrix[:,18] = tot_random_t_q_high
+    results_matrix[:,19] = tot_random_t_q_max
+
+    return results_matrix
