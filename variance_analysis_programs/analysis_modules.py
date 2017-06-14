@@ -574,6 +574,13 @@ def scatter_versus_random(hdf5_file,coverage_list=[1,2,3,4,5,10,15,20,25,30,35,4
     return results_matrix
 
 def coverage_to_N_converter(hdf5_file,coverage_list,N_trials=10000):
+    from scipy.stats.mstats import chisquare
+    import yt, h5py, re, os
+    from simple_tools import high_low_limit
+    import numpy as np
+    from random import sample
+    from scipy.stats.mstats import chisquare
+    from astropy.cosmology import FlatLambdaCDM
     '''Given a hdf5 file formated into fields that cover ~1% of the galaxy
     what is the variance in particle number over the whole galaxy'''
 
