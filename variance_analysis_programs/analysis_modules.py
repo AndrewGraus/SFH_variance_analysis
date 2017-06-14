@@ -441,8 +441,18 @@ def scatter_versus_random(hdf5_file,coverage_list=[1,2,3,4,5,10,15,20,25,30,35,4
     '''fiducial scatter from SFH variation'''
     from random import sample
     from scipy.stats.mstats import chisquare
+    import yt, h5py, re, os
+    from simple_tools import high_low_limit
+    import numpy as np
+    from astropy.cosmology import FlatLambdaCDM
 
     SFH_data = h5py.File(hdf5_file)
+
+    cosmo = FlatLambdaCDM(H0=71.0,Om0=0.266)
+
+    a_bins = np.linspace(0.0,1.0,1000)
+    T_bins = [cosmo.age(1.0/xx - 1.0) for xx in a_bins]
+    T_bins_fix = [(T_bins[ii]+T_bins[ii+1])/2.0 for ii in range(len(T_bins)-1)]
 
     #go ahead and calculate the t parameters for the total galaxy distribution in the fields
 
@@ -454,8 +464,8 @@ def scatter_versus_random(hdf5_file,coverage_list=[1,2,3,4,5,10,15,20,25,30,35,4
         [all_star_ages.append(xx) for xx in target_los]
 
     total_age_hist, total_age_bin = np.histogram(all_star_ages,bins=a_bins,normed=False)
-    c_age_hist = np.cumsum(total_age_hist) 
-    total_sfh_norm = constructed_sfh/float(max(c_age_hist))
+    c_age_hist = np.cumsum(total_age_hist)
+    total_sfh_norm = c_age_hist/float(max(c_age_hist))
     total_t_half = np.min([T_bins_fix[xx] for xx in range(len(total_sfh_norm)) if total_sfh_norm[xx]>=0.5])
     total_t_90 = np.min([T_bins_fix[xx] for xx in range(len(total_sfh_norm)) if total_sfh_norm[xx]>=0.9])
     total_t_q = np.min([T_bins_fix[xx] for xx in range(len(total_sfh_norm)) if total_sfh_norm[xx]>=0.99])
@@ -504,7 +514,7 @@ def scatter_versus_random(hdf5_file,coverage_list=[1,2,3,4,5,10,15,20,25,30,35,4
 
     for N_part in N_tot_list:
         random_t_half, random_t_90, random_t_q = [], [], []
-        for kk in range(random_trails):
+        for kk in range(random_trials):
             random_SFH = sample(all_star_ages, N_part)
             age_hist, age_bin = np.histogram(random_SFH,bins=a_bins,normed=False)
             c_age_hist = np.cumsum(age_hist)
