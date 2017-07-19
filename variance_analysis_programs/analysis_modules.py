@@ -873,7 +873,7 @@ def slice_plotter(los_cell_file,cell_list,z_dist_bins,R_half,center):
     import matplotlib.gridspec as gridspec
     from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-    cosmo = FlatLambdaCDM(H0=71.0,Om0=0.266,Ob0=0.0449,Neff=0.963)
+    cosmo = FlatLambdaCDM(H0=71.0,Om0=0.266)
 
     f = h5py.File(los_cell_file)
 
@@ -932,7 +932,7 @@ def slice_plotter(los_cell_file,cell_list,z_dist_bins,R_half,center):
 
     return age_array, rho_array, rho_norm_array, dist_proj_list
 
-def most_accurate_radius(hdf5_file,radius_bins,R_gal,R_half,center,time_bins=np.linspace(0.0,13.7,1000)):
+def most_accurate_radius(hdf5_file,radius_bins,R_gal,R_half,center):
     import numpy as np
     import h5py, re, os
     from astropy.cosmology import FlatLambdaCDM
@@ -968,10 +968,12 @@ def most_accurate_radius(hdf5_file,radius_bins,R_gal,R_half,center,time_bins=np.
     ################
 
     #make time list
-    cosmo = FlatLambdaCDM(H0=71.0,Om0=0.266,Ob0=0.0449,Neff=0.963)
+    cosmo = FlatLambdaCDM(H0=71.0,Om0=0.266)
 
     h = 0.71
     center = center
+
+    time_bins = np.linspace(0.0,13.7,1000)
 
     f = h5py.File(hdf5_file)
     star_coords = f['PartType4']['Coordinates'][:]
