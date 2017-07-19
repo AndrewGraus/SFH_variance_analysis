@@ -996,7 +996,7 @@ def most_accurate_radius(hdf5_file,radius_bins,R_gal,R_half,center):
     star_age_T_tot = star_ages_T[total_mask]
     total_hist, total_bins = np.histogram(star_age_T_tot,bins=time_bins)
     total_hist_c = np.cumsum(total_hist)
-    total_hist_c_norm = total_hist_c/float(max(total_hist_c))
+    total_rad_hist_c_norm = total_hist_c/float(max(total_hist_c))
     
     R_list = []
     square_diff_proj_list, T_histogram_proj_list = [], []
