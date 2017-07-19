@@ -999,10 +999,10 @@ def most_accurate_radius(hdf5_file,radius_bins,R_gal,R_half,center):
     total_hist_c_norm = total_hist_c/float(max(total_hist_c))
     
     R_list = []
-    square_diff_proj_list, T_histogram_proj_list = []
-    square_diff_rad_list, T_histogram_rad_list = []
-    square_diff_proj_c_list, T_histogram_proj_c_list = []
-    square_diff_rad_c_list, T_histogram_rad_c_list = []
+    square_diff_proj_list, T_histogram_proj_list = [], []
+    square_diff_rad_list, T_histogram_rad_list = [], []
+    square_diff_proj_c_list, T_histogram_proj_c_list = [], []
+    square_diff_rad_c_list, T_histogram_rad_c_list = [], []
 
     for ii in range(len(proj_bins)-1):
         R_list.append((proj_bins[ii]+proj_bins[ii+1])/2.0)
