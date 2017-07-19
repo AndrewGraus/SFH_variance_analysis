@@ -1063,4 +1063,4 @@ def most_accurate_radius(hdf5_file,radius_bins,R_gal,R_half,center):
     T_histogram_rad_c_array = np.asarray(T_histogram_rad_c_list)
     np.reshape(T_histogram_rad_c_array,(len(T_histogram_rad_c_array),len(T_histogram_rad_c_array[0])))
 
-    return T_histogram_proj_array, T_histogram_rad_array, T_histogram_proj_c_array, T_histogram_rad_c_array, total_hist_c_norm, square_diff_proj_list, square_diff_rad_list, square_diff_proj_c_list, square_diff_rad_c_list, R_proj_list
+    return T_histogram_proj_array, T_histogram_rad_array, T_histogram_proj_c_array, T_histogram_rad_c_array, total_rad_hist_c_norm, square_diff_proj_list, square_diff_rad_list, square_diff_proj_c_list, square_diff_rad_c_list, R_proj_list
