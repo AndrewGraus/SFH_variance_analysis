@@ -1026,7 +1026,7 @@ def most_accurate_radius(hdf5_file,radius_bins,R_gal,R_half,center):
         segment_hist_c = np.cumsum(segment_hist)
         segment_hist_c_norm = segment_hist_c/float(max(segment_hist_c))
         segment_diff = segment_hist_c_norm - total_rad_hist_c_norm
-        square_diff_list.append(np.linalg.norm(segment_diff)) 
+        square_diff_rad_list.append(np.linalg.norm(segment_diff)) 
         T_histogram_rad_list.append(segment_hist_c_norm)
 
         #cumulative binned SFHs in projection
