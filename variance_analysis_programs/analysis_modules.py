@@ -995,183 +995,17 @@ def bin_finder(target_list,start,bin_size,step_size,r_gal):
         if N_part >= bin_size:
             final_radius = r_current
             total_bin_mask = (target_list<final_radius)
-            r_prev = r_current
             bin_number += 1
             print 'bin number: '+str(bin_number)
             print 'the bin is between '+str(r_prev)+' and '+str(final_radius)+' and contains '+str(N_part)+' particles.\n'
             print 'the total number of particles is now: '+str(len(target_list[total_bin_mask]))
+            r_prev = r_current
             N_part = 0
             final_radius_list.append(final_radius)
         else:
             continue
 
     return final_radius_list
-
-
-def most_accurate_radius_old(hdf5_file,R_gal,R_half,center,radius_bins=None):
-    import numpy as np
-    import h5py, re, os
-    from astropy.cosmology import FlatLambdaCDM
-    import matplotlib.gridspec as gridspec
-    from mpl_toolkits.axes_grid1 import make_axes_locatable
-
-    ####
-    # Note: This is the old version of the module where the bin sizes
-    # are the same for both radial and projected, this is dumb
-    # I'm going to modify the module below to make two radial lists
-    # one in projection and one radial where the input list
-    # is configured such that it gathers some number of particles
-    # in the bin (probably 100?)
-    #####
-
-    #####
-    # The purpose of this program is to find the radius at which 
-    # the sfh is closest to the total SFH 
-    # and do this both in projection or radially
-    # Note this doesn't matter at all for the galaxy as a whole
-    # at least as defined by the "galaxy radius" the SFH
-    # for the total galaxy is basically the same in both
-    # projection and radially
-    #
-    ############
-    #
-    # Inputs: 
-    # hdf5_file - just the file with the star particles
-    # stats_file - file with the halo statistics like the positions
-    #              and galaxy radius, and such
-    # radius_bins - the bins within which the sfhs should be choosen
-    # 
-    # outputs:
-    # sfh_outputs - an array where the rows are the SFH for stars
-    #               between radius_bins[ii] and radius_bins[ii+1]
-    #               The length of this should be the length
-    #               of the radius bins - 1
-    # 
-    # square_diff - the squared difference between the total SFH
-    #               and the SFH in each bin, once again this
-    #               has the length of radius_bins - 1
-    #
-    ################
-
-    #####
-    #
-    # To do 
-    # change mentions of proj_bins
-    # make the radial bin sizes reflective of the actual size of the galaxy
-
-    #make time list
-    cosmo = FlatLambdaCDM(H0=71.0,Om0=0.266)
-
-    h = 0.71
-    center = center
-
-    time_bins = np.linspace(0.0,13.7,1000)
-
-    f = h5py.File(hdf5_file)
-    star_coords = f['PartType4']['Coordinates'][:]
-    star_mass = f['PartType4']['Masses'][:]
-    star_age = f['PartType4']['StellarFormationTime'][:] #units are a
-    star_ages_T = np.asarray([cosmo.age(1.0/xx - 1.0) for xx in star_age])
-
-    part_X = star_coords[:,0]
-    part_Z = star_coords[:,2]
-    part_Y = star_coords[:,1]
-
-    part_dist_proj = np.sqrt((part_X-center[0])**2.0+(part_Y-center[1])**2.0)
-    star_dist = np.sqrt((part_X-center[0])**2.0+(part_Y-center[1])**2.0+(part_Z-center[2])**2.0)
-
-    total_mask = (star_dist>0.0)&(star_dist<R_gal)
-    star_age_T_tot = star_ages_T[total_mask]
-    N_tot = len(star_age_T_tot)
-    total_hist, total_bins = np.histogram(star_age_T_tot,bins=time_bins)
-    total_hist_c = np.cumsum(total_hist)
-    total_rad_hist_c_norm = total_hist_c/float(max(total_hist_c))
-    
-    R_list = []
-    square_diff_proj_list, T_histogram_proj_list = [], []
-    square_diff_rad_list, T_histogram_rad_list = [], []
-    square_diff_proj_c_list, T_histogram_proj_c_list = [], []
-    square_diff_rad_c_list, T_histogram_rad_c_list = [], []
-
-    if radius_bins==None:
-        print 'starting bin finder'
-        radius_bins = bin_finder(star_dist,0.0,100,R_half/100.0)
-
-    print radius_bins
-
-    for ii in range(len(radius_bins)-1):
-        R_list.append((radius_bins[ii]+radius_bins[ii+1])/2.0)
-
-        #binned SFHs in projection
-        proj_mask = (part_dist_proj>radius_bins[ii])&(part_dist_proj<radius_bins[ii+1])
-        star_ages_T_select = star_ages_T[proj_mask]
-        print 'between '+str(radius_bins[ii])+' kpc and '+str(radius_bins[ii+1])+'kpc'
-
-        print 'projected: '
-        print 'N_bin: '+str(len(star_ages_T_select))+', N_tot: '+str(N_tot)
-
-        segment_hist, segement_bins = np.histogram(star_ages_T_select,bins=time_bins)
-        segment_hist_c = np.cumsum(segment_hist)
-        segment_hist_c_norm = segment_hist_c/float(max(segment_hist_c))
-        segment_diff = segment_hist_c_norm - total_rad_hist_c_norm
-        square_diff_proj_list.append(np.linalg.norm(segment_diff)) 
-        T_histogram_proj_list.append(segment_hist_c_norm)
-
-        #binned SFHs radially
-        radial_mask = (star_dist>radius_bins[ii])&(star_dist<radius_bins[ii+1])
-        star_ages_T_select_radial = star_ages_T[radial_mask]
-
-        #print 'radial: '
-        #print 'N_bin: '+str(len(star_ages_T_select_radial))+', N_tot: '+str(N_tot)
-
-        segment_hist, segement_bins = np.histogram(star_ages_T_select,bins=time_bins)
-        segment_hist_c = np.cumsum(segment_hist)
-        segment_hist_c_norm = segment_hist_c/float(max(segment_hist_c))
-        segment_diff = segment_hist_c_norm - total_rad_hist_c_norm
-        square_diff_rad_list.append(np.linalg.norm(segment_diff)) 
-        T_histogram_rad_list.append(segment_hist_c_norm)
-
-        #cumulative binned SFHs in projection
-        proj_mask = (part_dist_proj>0.0)&(part_dist_proj<radius_bins[ii])
-        star_ages_T_select = star_ages_T[proj_mask]
-        
-        #print 'projected cumulative: '
-        #print 'N_bin: '+str(len(star_ages_T_select))+', N_tot: '+str(N_tot)
-
-        segment_hist, segement_bins = np.histogram(star_ages_T_select,bins=time_bins)
-        segment_hist_c = np.cumsum(segment_hist)
-        segment_hist_c_norm = segment_hist_c/float(max(segment_hist_c))
-        segment_diff = segment_hist_c_norm - total_rad_hist_c_norm
-        square_diff_proj_c_list.append(np.linalg.norm(segment_diff)) 
-        T_histogram_proj_c_list.append(segment_hist_c_norm)
-
-        #cumulative binned SFHs radially
-        radial_mask = (star_dist>0.0)&(star_dist<radius_bins[ii])
-        star_ages_T_select_radial = star_ages_T[radial_mask]
-
-        #print 'radial cumulative: '
-        #print 'N_bin: '+str(len(star_ages_T_select_radial))+', N_tot: '+str(N_tot)
-
-        segment_hist, segement_bins = np.histogram(star_ages_T_select,bins=time_bins)
-        segment_hist_c = np.cumsum(segment_hist)
-        segment_hist_c_norm = segment_hist_c/float(max(segment_hist_c))
-        segment_diff = segment_hist_c_norm - total_rad_hist_c_norm
-        square_diff_rad_c_list.append(np.linalg.norm(segment_diff)) 
-        T_histogram_rad_c_list.append(segment_hist_c_norm)
-    
-    T_histogram_proj_array = np.asarray(T_histogram_proj_list)
-    np.reshape(T_histogram_proj_array,(len(T_histogram_proj_array),len(T_histogram_proj_array[0])))
-
-    T_histogram_rad_array = np.asarray(T_histogram_rad_list)
-    np.reshape(T_histogram_rad_array,(len(T_histogram_rad_array),len(T_histogram_rad_array[0])))
-
-    T_histogram_proj_c_array = np.asarray(T_histogram_proj_c_list)
-    np.reshape(T_histogram_proj_c_array,(len(T_histogram_proj_c_array),len(T_histogram_proj_c_array[0])))
-
-    T_histogram_rad_c_array = np.asarray(T_histogram_rad_c_list)
-    np.reshape(T_histogram_rad_c_array,(len(T_histogram_rad_c_array),len(T_histogram_rad_c_array[0])))
-
-    return T_histogram_proj_array, T_histogram_rad_array, T_histogram_proj_c_array, T_histogram_rad_c_array, total_rad_hist_c_norm, square_diff_proj_list, square_diff_rad_list, square_diff_proj_c_list, square_diff_rad_c_list, R_list
 
 def most_accurate_radius(hdf5_file,R_gal,R_half,center,radius_bins=None):
     import numpy as np
@@ -1243,6 +1077,15 @@ def most_accurate_radius(hdf5_file,R_gal,R_half,center,radius_bins=None):
     total_hist, total_bins = np.histogram(star_age_T_tot,bins=time_bins)
     total_hist_c = np.cumsum(total_hist)
     total_rad_hist_c_norm = total_hist_c/float(max(total_hist_c))
+
+    r_half_mask = (star_dist>0.0)&(star_dist<R_half)
+    star_age_T_half = star_ages_T[r_half_mask]
+    star_dist_half = star_dist[r_half_mask]
+    star_dist_proj_half = part_dist_proj[total_mask]
+    N_half = len(star_age_T_half)
+    r_half_hist, r_half_bins = np.histogram(star_age_T_half,bins=time_bins)
+    r_half_hist_c = np.cumsum(r_half_hist)
+    r_half_rad_hist_c_norm = r_half_hist_c/float(max(r_half_hist_c))
     
     R_list, R_list_proj = [], []
     square_diff_proj_list, T_histogram_proj_list = [], []
@@ -1262,7 +1105,7 @@ def most_accurate_radius(hdf5_file,R_gal,R_half,center,radius_bins=None):
         R_list.append((radius_bins[ii]+radius_bins[ii+1])/2.0)
         #binned SFHs in projection
         dist_mask = (star_dist_gal>radius_bins[ii])&(star_dist_gal<radius_bins[ii+1])
-        star_ages_T_select = star_ages_T[dist_mask]
+        star_ages_T_select = star_age_T_tot[dist_mask]
         print 'between '+str(radius_bins[ii])+' kpc and '+str(radius_bins[ii+1])+'kpc'
 
         print 'radial: '
@@ -1270,7 +1113,7 @@ def most_accurate_radius(hdf5_file,R_gal,R_half,center,radius_bins=None):
 
         #binned SFHs radially
         radial_mask = (star_dist>radius_bins[ii])&(star_dist<radius_bins[ii+1])
-        star_ages_T_select_radial = star_ages_T[radial_mask]
+        star_ages_T_select_radial = star_age_T_tot[radial_mask]
 
         segment_hist, segement_bins = np.histogram(star_ages_T_select,bins=time_bins)
         segment_hist_c = np.cumsum(segment_hist)
@@ -1332,4 +1175,4 @@ def most_accurate_radius(hdf5_file,R_gal,R_half,center,radius_bins=None):
     T_histogram_rad_c_array = np.asarray(T_histogram_rad_c_list)
     np.reshape(T_histogram_rad_c_array,(len(T_histogram_rad_c_array),len(T_histogram_rad_c_array[0])))
 
-    return T_histogram_proj_array, T_histogram_rad_array, T_histogram_proj_c_array, T_histogram_rad_c_array, total_rad_hist_c_norm, square_diff_proj_list, square_diff_rad_list, square_diff_proj_c_list, square_diff_rad_c_list, R_list, R_list_proj
+    return T_histogram_proj_array, T_histogram_rad_array, T_histogram_proj_c_array, T_histogram_rad_c_array, total_rad_hist_c_norm, r_half_rad_hist_c_norm, square_diff_proj_list, square_diff_rad_list, square_diff_proj_c_list, square_diff_rad_c_list, R_list, R_list_proj
