@@ -11,7 +11,7 @@ def find_t50(input_los):
 
     cosmo = FlatLambdaCDM(H0=71.0,Om0=0.266)
     a_bins = np.linspace(0.0,1.0,1000)
-    T_bins = [cosmo.age(1.0/xx - 1.0) for xx in a_bins]
+    T_bins = [cosmo.age(1.0/xx - 1.0).value for xx in a_bins]
     T_bins_fix = [(T_bins[ii]+T_bins[ii+1])/2.0 for ii in range(len(T_bins)-1)]
     t_halfs_list = []
     if input_los.ndim==1:
@@ -38,7 +38,7 @@ def find_t90(input_los):
 
     cosmo = FlatLambdaCDM(H0=71.0,Om0=0.266)
     a_bins = np.linspace(0.0,1.0,1000)
-    T_bins = [cosmo.age(1.0/xx - 1.0) for xx in a_bins]
+    T_bins = [cosmo.age(1.0/xx - 1.0).value for xx in a_bins]
     T_bins_fix = [(T_bins[ii]+T_bins[ii+1])/2.0 for ii in range(len(T_bins)-1)]
     t_90_list = []
     if input_los.ndim==1:
@@ -65,7 +65,7 @@ def find_tq(input_los):
 
     cosmo = FlatLambdaCDM(H0=71.0,Om0=0.266)
     a_bins = np.linspace(0.0,1.0,1000)
-    T_bins = [cosmo.age(1.0/xx - 1.0) for xx in a_bins]
+    T_bins = [cosmo.age(1.0/xx - 1.0).value for xx in a_bins]
     T_bins_fix = [(T_bins[ii]+T_bins[ii+1])/2.0 for ii in range(len(T_bins)-1)]
     t_q_list = []
     if input_los.ndim==1:
@@ -105,7 +105,7 @@ def SFH_variance(hdf5_file,coverage_bins=[1,5,10,20,30,40,50,60,70,80,90,99],cov
     # coverage_bins - the percentages to do the calculation on
 
     a_bins = np.linspace(0.0,1.0,1000)
-    T_bins = [cosmo.age(1.0/xx - 1.0) for xx in a_bins]
+    T_bins = [cosmo.age(1.0/xx - 1.0).value for xx in a_bins]
     T_bins_fix = [(T_bins[ii]+T_bins[ii+1])/2.0 for ii in range(len(T_bins)-1)]
 
     coverage_list = coverage_bins
@@ -236,7 +236,7 @@ def SFH_variance_bootstrap(hdf5_file,coverage_bins=[1,5,10,20,30,40,50,60,70,80,
     cosmo = FlatLambdaCDM(H0=71.0,Om0=0.266)
 
     a_bins = np.linspace(0.0,1.0,1000)
-    T_bins = [cosmo.age(1.0/xx - 1.0) for xx in a_bins]
+    T_bins = [cosmo.age(1.0/xx - 1.0).value for xx in a_bins]
     T_bins_fix = [(T_bins[ii]+T_bins[ii+1])/2.0 for ii in range(len(T_bins)-1)]
 
     coverage_list = coverage_bins
@@ -451,7 +451,7 @@ def scatter_versus_random(hdf5_file,coverage_list=[1,2,3,4,5,10,15,20,25,30,35,4
     cosmo = FlatLambdaCDM(H0=71.0,Om0=0.266)
 
     a_bins = np.linspace(0.0,1.0,1000)
-    T_bins = [cosmo.age(1.0/xx - 1.0) for xx in a_bins]
+    T_bins = [cosmo.age(1.0/xx - 1.0).value for xx in a_bins]
     T_bins_fix = [(T_bins[ii]+T_bins[ii+1])/2.0 for ii in range(len(T_bins)-1)]
 
     #go ahead and calculate the t parameters for the total galaxy distribution in the fields
@@ -652,7 +652,7 @@ def calculate_random_number_variance(hdf5_file,coverage_list,N_trials):
     cosmo = FlatLambdaCDM(H0=71.0,Om0=0.266)
 
     a_bins = np.linspace(0.0,1.0,10000)
-    T_bins = [cosmo.age(1.0/xx - 1.0) for xx in a_bins]
+    T_bins = [cosmo.age(1.0/xx - 1.0).value for xx in a_bins]
     T_bins_fix = [(T_bins[ii]+T_bins[ii+1])/2.0 for ii in range(len(T_bins)-1)]
 
     SFH_data = h5py.File(hdf5_file)
@@ -764,7 +764,7 @@ def calculate_sim_coverage_scatter(hdf5_file,coverage_list,N_trials):
     cosmo = FlatLambdaCDM(H0=71.0,Om0=0.266)
 
     a_bins = np.linspace(0.0,1.0,10000)
-    T_bins = [cosmo.age(1.0/xx - 1.0) for xx in a_bins]
+    T_bins = [cosmo.age(1.0/xx - 1.0).value for xx in a_bins]
     T_bins_fix = [(T_bins[ii]+T_bins[ii+1])/2.0 for ii in range(len(T_bins)-1)]
     '''error as a function of coverage fraction'''
 
@@ -889,7 +889,7 @@ def slice_plotter(los_cell_file,cell_list,z_dist_bins,R_half,center):
         particle_coordinates = f['LOS_data']['los_'+str(los_numbers[jj])]['coordinates'][:]
         particle_ages = f['LOS_data']['los_'+str(los_numbers[jj])]['age'][:]
 
-        particle_ages_T = np.asarray([cosmo.age(1.0/xx - 1.0) for xx in particle_ages])
+        particle_ages_T = np.asarray([cosmo.age(1.0/xx - 1.0).value for xx in particle_ages])
 
         part_X = particle_coordinates[:,0]
         part_Z = particle_coordinates[:,2]
@@ -1007,7 +1007,7 @@ def bin_finder(target_list,start,bin_size,step_size,r_gal):
 
     return final_radius_list
 
-def most_accurate_radius(hdf5_file,R_gal,R_half,center,radius_bins=None):
+def most_accurate_radius(hdf5_file,R_gal,R_half,center,radius_bins=None,rot_coordinates=False,file_type='gizmo'):
     import numpy as np
     import h5py, re, os
     from astropy.cosmology import FlatLambdaCDM
@@ -1056,11 +1056,25 @@ def most_accurate_radius(hdf5_file,R_gal,R_half,center,radius_bins=None):
 
     time_bins = np.linspace(0.0,13.7,1000)
 
-    f = h5py.File(hdf5_file)
-    star_coords = f['PartType4']['Coordinates'][:]
-    star_mass = f['PartType4']['Masses'][:]
-    star_age = f['PartType4']['StellarFormationTime'][:] #units are a
-    star_ages_T = np.asarray([cosmo.age(1.0/xx - 1.0) for xx in star_age])
+    if file_type=='gizmo':
+        star_coords = f['PartType4']['Coordinates'][:]
+        star_mass = f['PartType4']['Masses'][:]
+        star_vel = f['PartType4']['Velocity'][:]
+        star_age = f['PartType4']['StellarFormationTime'][:]
+        star_ages_T = np.asarray([cosmo.age(1.0/xx - 1.0).value for xx in star_age])
+
+    elif  file_type=='stars only':
+        star_coords = f['star_particle_data']['coordinates'][:]
+        star_vel = f['star_particle_data']['velocities']
+        star_mass = f['star_particle_data']['masses'][:]
+        star_ages_T = f['star_particle_data']['age_t'][:]
+    else:
+        print 'Unrecognized file type'
+        sys.exit(1)
+
+    if rotation_coordinates != False:
+        assert len(rot_coordinates)==3
+        star_coords, star_vel = Rotate_to_z_axis(star_coords,star_vel,rotation_axis)
 
     part_X = star_coords[:,0]
     part_Z = star_coords[:,2]
@@ -1165,3 +1179,76 @@ def most_accurate_radius(hdf5_file,R_gal,R_half,center,radius_bins=None):
     np.reshape(T_histogram_rad_c_array,(len(T_histogram_rad_c_array),len(T_histogram_rad_c_array[0])))
 
     return T_histogram_proj_array, T_histogram_rad_array, T_histogram_proj_c_array, T_histogram_rad_c_array, total_rad_hist_c_norm, r_half_rad_hist_c_norm, square_diff_proj_list, square_diff_rad_list, square_diff_proj_c_list, square_diff_rad_c_list, radius_bins, radius_bins_proj
+
+def Rotate_to_z_axis(coordinates,velocities,rotation_axis):
+    import numpy as np
+    import yt, h5py, re, os
+    from math import log10
+    from astropy.cosmology import FlatLambdaCDM
+    from andrew_hydro_sim_modules.simple_tools import get_distance_vector, get_distance
+
+    L = np.sqrt(rotation_axis[0]**2.0+rotation_axis[1]**2.0+rotation_axis[2]**2.0)
+    R = np.sqrt(rotation_axis[0]**2.0+rotation_axis[1]**2.0)
+    R1 = np.asarray([[rotation_axis[0]/R,rotation_axis[1]/R,0.0],[-rotation_axis[1]/R,rotation_axis[0],0.0],[0.0,0.0,1.0]])
+    R2 = np.asarray([[rotation_axis[2]/L,0.0,-R/L],[0.0,1.0,0.0],[R/L,0.0,rotation_axis[2]/L]])
+
+    coord_rotate = np.asarray([R2.dot(R1.dot(xx)) for xx in coordinates])
+    vel_rotate = np.asarray([R2.dot(R1.dot(xx)) for xx in velocities])
+
+    return coord_rotate, vel_rotate
+
+def find_R_half_proj(hdf5_file,R_gal,R_half,center,rot_coordinates=False,file_type='gizmo'):
+    import numpy as np
+    import h5py, re, os, sys
+    from astropy.cosmology import FlatLambdaCDM
+    f = h5py.File(hdf5_file)
+    cell_size = 2.0*R_half/10.0
+
+    if file_type=='gizmo':
+        star_coords = f['PartType4']['Coordinates'][:]
+        star_mass = f['PartType4']['Masses'][:]
+        star_vel = f['PartType4']['Velocity'][:]
+        star_age = f['PartType4']['StellarFormationTime'][:]
+        star_ages_T = np.asarray([cosmo.age(1.0/xx - 1.0).value for xx in star_age])
+
+    elif  file_type=='stars only':
+        star_coords = f['star_particle_data']['coordinates'][:]
+        star_vel = f['star_particle_data']['velocities']
+        star_mass = f['star_particle_data']['masses'][:]
+        star_ages_T = f['star_particle_data']['age_t'][:]
+    else:
+        print 'Unrecognized file type'
+        sys.exit(1)
+
+    if rotation_coordinates != False:
+        assert len(rot_coordinates)==3
+        star_coords, star_vel = Rotate_to_z_axis(star_coords,star_vel,rotation_axis)
+
+    x_coords = star_coords[:,0]
+    y_coords = star_coords[:,1]
+    z_coords = star_coords[:,2]
+    radial_dist = np.sqrt((x_coords-center[0])**2.0+(y_coords-center[1])**2.0+(z_coords-center[2])**2.0)
+    proj_dist = np.sqrt((x_coords-center[0])**2.0+(y_coords-center[1])**2.0)
+
+    r_proj_tot_mask = (proj_dist<R_gal)&(proj_dist>0.0)
+    N_part_tot = len(star_age_t[r_proj_tot_mask])
+
+    r_proj_profiles = np.linspace(0.0,R_gal,100)
+
+    N_proj_list = []
+    ratio_tot = []
+
+    for ii in range(len(r_proj_profiles)):
+        bin_mask = (proj_dist>0.0)&(proj_dist<r_proj_profiles[ii])
+        mass_select = star_mass[bin_mask]
+        age_select = star_age_t[bin_mask]
+        N_proj_list.append(len(age_select))
+        ratio_tot.append(float(len(age_select))/float(N_part_tot))
+
+    ratio_tot = np.asarray(ratio_tot)
+
+    diff_array = np.asarray([abs(xx-0.5) for xx in ratio_tot])
+    min_rad= r_proj_profiles[(diff_array==min(diff_array))]
+    min_diff = ratio_tot[(diff_array==min(diff_array))]
+
+    print min_rad, min_diff
