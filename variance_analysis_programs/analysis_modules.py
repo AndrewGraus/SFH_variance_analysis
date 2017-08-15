@@ -3,12 +3,6 @@
 #
 #1) Port the program that calculates the SFH variance as a function of coverage fraction
 #2) Port the program that bootstraps that variance calculation
-#
-# August 15th - I've added the rotation module, what I want to do now is modify every
-# single module that takes coordinates and instead of reading them in directly from
-# the file so that I can read them in and then rotate them and then feed them to each module
-# (maybe I should modify the program so that it can take either)
-#
 
 def find_t50(input_los):
     import astroML.resample
@@ -17,7 +11,7 @@ def find_t50(input_los):
 
     cosmo = FlatLambdaCDM(H0=71.0,Om0=0.266)
     a_bins = np.linspace(0.0,1.0,1000)
-    T_bins = [cosmo.age(1.0/xx - 1.0).value for xx in a_bins]
+    T_bins = [cosmo.age(1.0/xx - 1.0) for xx in a_bins]
     T_bins_fix = [(T_bins[ii]+T_bins[ii+1])/2.0 for ii in range(len(T_bins)-1)]
     t_halfs_list = []
     if input_los.ndim==1:
@@ -44,7 +38,7 @@ def find_t90(input_los):
 
     cosmo = FlatLambdaCDM(H0=71.0,Om0=0.266)
     a_bins = np.linspace(0.0,1.0,1000)
-    T_bins = [cosmo.age(1.0/xx - 1.0).value for xx in a_bins]
+    T_bins = [cosmo.age(1.0/xx - 1.0) for xx in a_bins]
     T_bins_fix = [(T_bins[ii]+T_bins[ii+1])/2.0 for ii in range(len(T_bins)-1)]
     t_90_list = []
     if input_los.ndim==1:
@@ -71,7 +65,7 @@ def find_tq(input_los):
 
     cosmo = FlatLambdaCDM(H0=71.0,Om0=0.266)
     a_bins = np.linspace(0.0,1.0,1000)
-    T_bins = [cosmo.age(1.0/xx - 1.0).value for xx in a_bins]
+    T_bins = [cosmo.age(1.0/xx - 1.0) for xx in a_bins]
     T_bins_fix = [(T_bins[ii]+T_bins[ii+1])/2.0 for ii in range(len(T_bins)-1)]
     t_q_list = []
     if input_los.ndim==1:
@@ -111,7 +105,7 @@ def SFH_variance(hdf5_file,coverage_bins=[1,5,10,20,30,40,50,60,70,80,90,99],cov
     # coverage_bins - the percentages to do the calculation on
 
     a_bins = np.linspace(0.0,1.0,1000)
-    T_bins = [cosmo.age(1.0/xx - 1.0).value for xx in a_bins]
+    T_bins = [cosmo.age(1.0/xx - 1.0) for xx in a_bins]
     T_bins_fix = [(T_bins[ii]+T_bins[ii+1])/2.0 for ii in range(len(T_bins)-1)]
 
     coverage_list = coverage_bins
@@ -229,6 +223,7 @@ def SFH_variance(hdf5_file,coverage_bins=[1,5,10,20,30,40,50,60,70,80,90,99],cov
 
     return con_t_matrix
 
+
 def SFH_variance_bootstrap(hdf5_file,coverage_bins=[1,5,10,20,30,40,50,60,70,80,90,99],coverage_iterations=1000,bs_iterations=1000):
     '''fiducial scatter from SFH variation'''
     import yt, h5py, re, os
@@ -241,7 +236,7 @@ def SFH_variance_bootstrap(hdf5_file,coverage_bins=[1,5,10,20,30,40,50,60,70,80,
     cosmo = FlatLambdaCDM(H0=71.0,Om0=0.266)
 
     a_bins = np.linspace(0.0,1.0,1000)
-    T_bins = [cosmo.age(1.0/xx - 1.0).value for xx in a_bins]
+    T_bins = [cosmo.age(1.0/xx - 1.0) for xx in a_bins]
     T_bins_fix = [(T_bins[ii]+T_bins[ii+1])/2.0 for ii in range(len(T_bins)-1)]
 
     coverage_list = coverage_bins
@@ -456,7 +451,7 @@ def scatter_versus_random(hdf5_file,coverage_list=[1,2,3,4,5,10,15,20,25,30,35,4
     cosmo = FlatLambdaCDM(H0=71.0,Om0=0.266)
 
     a_bins = np.linspace(0.0,1.0,1000)
-    T_bins = [cosmo.age(1.0/xx - 1.0).value for xx in a_bins]
+    T_bins = [cosmo.age(1.0/xx - 1.0) for xx in a_bins]
     T_bins_fix = [(T_bins[ii]+T_bins[ii+1])/2.0 for ii in range(len(T_bins)-1)]
 
     #go ahead and calculate the t parameters for the total galaxy distribution in the fields
@@ -657,7 +652,7 @@ def calculate_random_number_variance(hdf5_file,coverage_list,N_trials):
     cosmo = FlatLambdaCDM(H0=71.0,Om0=0.266)
 
     a_bins = np.linspace(0.0,1.0,10000)
-    T_bins = [cosmo.age(1.0/xx - 1.0).value for xx in a_bins]
+    T_bins = [cosmo.age(1.0/xx - 1.0) for xx in a_bins]
     T_bins_fix = [(T_bins[ii]+T_bins[ii+1])/2.0 for ii in range(len(T_bins)-1)]
 
     SFH_data = h5py.File(hdf5_file)
@@ -769,7 +764,7 @@ def calculate_sim_coverage_scatter(hdf5_file,coverage_list,N_trials):
     cosmo = FlatLambdaCDM(H0=71.0,Om0=0.266)
 
     a_bins = np.linspace(0.0,1.0,10000)
-    T_bins = [cosmo.age(1.0/xx - 1.0).value for xx in a_bins]
+    T_bins = [cosmo.age(1.0/xx - 1.0) for xx in a_bins]
     T_bins_fix = [(T_bins[ii]+T_bins[ii+1])/2.0 for ii in range(len(T_bins)-1)]
     '''error as a function of coverage fraction'''
 
@@ -894,7 +889,7 @@ def slice_plotter(los_cell_file,cell_list,z_dist_bins,R_half,center):
         particle_coordinates = f['LOS_data']['los_'+str(los_numbers[jj])]['coordinates'][:]
         particle_ages = f['LOS_data']['los_'+str(los_numbers[jj])]['age'][:]
 
-        particle_ages_T = np.asarray([cosmo.age(1.0/xx - 1.0).value for xx in particle_ages])
+        particle_ages_T = np.asarray([cosmo.age(1.0/xx - 1.0) for xx in particle_ages])
 
         part_X = particle_coordinates[:,0]
         part_Z = particle_coordinates[:,2]
@@ -1000,11 +995,11 @@ def bin_finder(target_list,start,bin_size,step_size,r_gal):
         if N_part >= bin_size:
             final_radius = r_current
             total_bin_mask = (target_list<final_radius)
-            r_prev = r_current
             bin_number += 1
             print 'bin number: '+str(bin_number)
             print 'the bin is between '+str(r_prev)+' and '+str(final_radius)+' and contains '+str(N_part)+' particles.\n'
             print 'the total number of particles is now: '+str(len(target_list[total_bin_mask]))
+            r_prev = r_current
             N_part = 0
             final_radius_list.append(final_radius)
         else:
@@ -1012,7 +1007,7 @@ def bin_finder(target_list,start,bin_size,step_size,r_gal):
 
     return final_radius_list
 
-def most_accurate_radius(hdf5_file,R_gal,R_half,center,radius_bins=None,rot_coordinates=False):
+def most_accurate_radius(hdf5_file,R_gal,R_half,center,radius_bins=None):
     import numpy as np
     import h5py, re, os
     from astropy.cosmology import FlatLambdaCDM
@@ -1064,13 +1059,8 @@ def most_accurate_radius(hdf5_file,R_gal,R_half,center,radius_bins=None,rot_coor
     f = h5py.File(hdf5_file)
     star_coords = f['PartType4']['Coordinates'][:]
     star_mass = f['PartType4']['Masses'][:]
-    star_vel = f['PartType4']['Velocity'][:]
     star_age = f['PartType4']['StellarFormationTime'][:] #units are a
-    star_ages_T = np.asarray([cosmo.age(1.0/xx - 1.0).value for xx in star_age])
-
-    if rotation_coordinates != False:
-        assert len(rot_coordinates)==3
-        star_coords, star_vel = Rotate_to_z_axis(star_coords,star_vel,rotation_axis)
+    star_ages_T = np.asarray([cosmo.age(1.0/xx - 1.0) for xx in star_age])
 
     part_X = star_coords[:,0]
     part_Z = star_coords[:,2]
@@ -1087,6 +1077,15 @@ def most_accurate_radius(hdf5_file,R_gal,R_half,center,radius_bins=None,rot_coor
     total_hist, total_bins = np.histogram(star_age_T_tot,bins=time_bins)
     total_hist_c = np.cumsum(total_hist)
     total_rad_hist_c_norm = total_hist_c/float(max(total_hist_c))
+
+    r_half_mask = (star_dist>0.0)&(star_dist<R_half)
+    star_age_T_half = star_ages_T[r_half_mask]
+    star_dist_half = star_dist[r_half_mask]
+    star_dist_proj_half = part_dist_proj[total_mask]
+    N_half = len(star_age_T_half)
+    r_half_hist, r_half_bins = np.histogram(star_age_T_half,bins=time_bins)
+    r_half_hist_c = np.cumsum(r_half_hist)
+    r_half_rad_hist_c_norm = r_half_hist_c/float(max(r_half_hist_c))
     
     R_list, R_list_proj = [], []
     square_diff_proj_list, T_histogram_proj_list = [], []
@@ -1096,27 +1095,20 @@ def most_accurate_radius(hdf5_file,R_gal,R_half,center,radius_bins=None,rot_coor
 
     if radius_bins==None:
         print 'starting bin finder'
-        radius_bins = bin_finder(star_dist_gal,0.0,100,R_half/100.0,R_gal)
+        radius_bins = bin_finder(star_dist_gal,0.0,int(float(len(star_age_T_tot))/20.0),R_half/100.0,R_gal)
 
         print 'starting proj bin finder'
 
-        radius_bins_proj = bin_finder(star_dist_proj_gal,0.0,100,R_half/100.0,R_gal)
+        radius_bins_proj = bin_finder(star_dist_proj_gal,0.0,int(float(len(star_age_T_tot))/20.0),R_half/100.0,R_gal)
 
     for ii in range(len(radius_bins)-1):
         R_list.append((radius_bins[ii]+radius_bins[ii+1])/2.0)
-        #binned SFHs in projection
-        dist_mask = (star_dist_gal>radius_bins[ii])&(star_dist_gal<radius_bins[ii+1])
-        star_ages_T_select = star_ages_T[dist_mask]
-        print 'between '+str(radius_bins[ii])+' kpc and '+str(radius_bins[ii+1])+'kpc'
-
-        print 'radial: '
-        print 'N_bin: '+str(len(star_ages_T_select))+', N_tot: '+str(N_tot)
 
         #binned SFHs radially
         radial_mask = (star_dist>radius_bins[ii])&(star_dist<radius_bins[ii+1])
         star_ages_T_select_radial = star_ages_T[radial_mask]
 
-        segment_hist, segement_bins = np.histogram(star_ages_T_select,bins=time_bins)
+        segment_hist, segement_bins = np.histogram(star_ages_T_select_radial,bins=time_bins)
         segment_hist_c = np.cumsum(segment_hist)
         segment_hist_c_norm = segment_hist_c/float(max(segment_hist_c))
         segment_diff = segment_hist_c_norm - total_rad_hist_c_norm
@@ -1130,7 +1122,7 @@ def most_accurate_radius(hdf5_file,R_gal,R_half,center,radius_bins=None,rot_coor
         #print 'radial cumulative: '
         #print 'N_bin: '+str(len(star_ages_T_select_radial))+', N_tot: '+str(N_tot)
 
-        segment_hist, segement_bins = np.histogram(star_ages_T_select,bins=time_bins)
+        segment_hist, segement_bins = np.histogram(star_ages_T_select_radial,bins=time_bins)
         segment_hist_c = np.cumsum(segment_hist)
         segment_hist_c_norm = segment_hist_c/float(max(segment_hist_c))
         segment_diff = segment_hist_c_norm - total_rad_hist_c_norm
@@ -1140,24 +1132,20 @@ def most_accurate_radius(hdf5_file,R_gal,R_half,center,radius_bins=None,rot_coor
     for jj in range(len(radius_bins_proj)-1):
         R_list_proj.append((radius_bins_proj[jj]+radius_bins_proj[jj+1])/2.0)
         #binned SFHs in projection
-        dist_mask_proj = (star_dist_proj_gal>radius_bins_proj[jj])&(star_dist_proj_gal<radius_bins_proj[jj+1])
-        star_ages_T_select = star_ages_T[dist_mask_proj]
-        print 'between '+str(radius_bins[jj])+' kpc and '+str(radius_bins[jj+1])+'kpc'
+        dist_mask_proj = (part_dist_proj>radius_bins_proj[jj])&(part_dist_proj<radius_bins_proj[jj+1])
+        star_ages_T_select_proj = star_ages_T[dist_mask_proj]
 
-        print 'projected: '
-        print 'N_bin: '+str(len(star_ages_T_select))+', N_tot: '+str(N_tot)
-
-        segment_hist, segement_bins = np.histogram(star_ages_T_select,bins=time_bins)
+        segment_hist, segement_bins = np.histogram(star_ages_T_select_proj,bins=time_bins)
         segment_hist_c = np.cumsum(segment_hist)
         segment_hist_c_norm = segment_hist_c/float(max(segment_hist_c))
         segment_diff = segment_hist_c_norm - total_rad_hist_c_norm
         square_diff_proj_list.append(np.linalg.norm(segment_diff)) 
         T_histogram_proj_list.append(segment_hist_c_norm)
 
-        proj_mask = (star_dist_proj_gal>0.0)&(star_dist_proj_gal<radius_bins_proj[jj])
-        star_ages_T_select = star_ages_T[proj_mask]
+        proj_mask = (part_dist_proj>0.0)&(part_dist_proj<radius_bins_proj[jj])
+        star_ages_T_select_proj = star_ages_T[proj_mask]
 
-        segment_hist, segement_bins = np.histogram(star_ages_T_select,bins=time_bins)
+        segment_hist, segement_bins = np.histogram(star_ages_T_select_proj,bins=time_bins)
         segment_hist_c = np.cumsum(segment_hist)
         segment_hist_c_norm = segment_hist_c/float(max(segment_hist_c))
         segment_diff = segment_hist_c_norm - total_rad_hist_c_norm
@@ -1176,97 +1164,4 @@ def most_accurate_radius(hdf5_file,R_gal,R_half,center,radius_bins=None,rot_coor
     T_histogram_rad_c_array = np.asarray(T_histogram_rad_c_list)
     np.reshape(T_histogram_rad_c_array,(len(T_histogram_rad_c_array),len(T_histogram_rad_c_array[0])))
 
-    return T_histogram_proj_array, T_histogram_rad_array, T_histogram_proj_c_array, T_histogram_rad_c_array, total_rad_hist_c_norm, square_diff_proj_list, square_diff_rad_list, square_diff_proj_c_list, square_diff_rad_c_list, R_list, R_list_proj
-
-def Rotate_to_z_axis(coordinates,velocities,rotation_axis):
-    '''This program simply takes coordinates (orignally made for
-    star particles) and rotates them along some already given
-    axis 
-
-    In practice this is done by calculating angles given the
-    input vector, and then first rotating about the z axis to
-    get to the xz plane, and then rotating about the
-    y axis to make the given axis the z axis'''
-
-    import numpy as np
-    import yt, h5py, re, os
-    from math import log10
-    from astropy.cosmology import FlatLambdaCDM
-    from andrew_hydro_sim_modules.simple_tools import get_distance_vector, get_distance
-
-    L = np.sqrt(rotation_axis[0]**2.0+rotation_axis[1]**2.0+rotation_axis[2]**2.0) #total length     
-    R = np.sqrt(rotation_axis[0]**2.0+rotation_axis[1]**2.0) #length in xy plane                     
-
-    '''The sin an cos of the angles of rotation can then be given by combinations of hte axis
-    coodinates and lengths'''
-
-    R1 = np.asarray([[rotation_axis[0]/R,rotation_axis[1]/R,0.0],[-rotation_axis[1]/R,rotation_axis[\
-0],0.0],[0.0,0.0,1.0]]) #rotation about z axis to project into xz plane                              
-    R2 = np.asarray([[rotation_axis[2]/L,0.0,-R/L],[0.0,1.0,0.0],[R/L,0.0,rotation_axis[2]/L]]) #rot\
-ation about y axis to make given axis the z axis                                                     
-
-    #apply rotation to coordinates and velocities                                                    
-
-    coord_rotate = np.asarray([R2.dot(R1.dot(xx)) for xx in coordinates])
-    vel_rotate = np.asarray([R2.dot(R1.dot(xx)) for xx in velocities])
-
-    return coord_rotate, vel_rotate
-
-def find_R_half_proj(hdf5_file,R_gal,R_half,center,rot_coordinates=False,file_type='gizmo'):
-    import numpy as np
-    import h5py, re, os, sys
-    from astropy.cosmology import FlatLambdaCDM
-    f = h5py.File(hdf5_file)
-    cell_size = 2.0*R_half/10.0
-
-    if file_type=='gizmo':
-        star_coords = f['PartType4']['Coordinates'][:]
-        star_mass = f['PartType4']['Masses'][:]
-        star_vel = f['PartType4']['Velocity'][:]
-        star_age = f['PartType4']['StellarFormationTime'][:] #units are a
-        star_ages_T = np.asarray([cosmo.age(1.0/xx - 1.0).value for xx in star_age])
-
-    elif  file_type=='stars only':
-        star_coords = f['star_particle_data']['coordinates'][:]
-        star_vel = f['star_particle_data']['velocities']
-        star_mass = f['star_particle_data']['masses'][:]
-        star_ages_T = f['star_particle_data']['age_t'][:]
-    else:
-        print 'Unrecognized file type'
-        sys.exit(1)
-
-    if rotation_coordinates != False:
-        assert len(rot_coordinates)==3
-        star_coords, star_vel = Rotate_to_z_axis(star_coords,star_vel,rotation_axis)
-
-    x_coords = star_coords[:,0]
-    y_coords = star_coords[:,1]
-    z_coords = star_coords[:,2]
-    radial_dist = np.sqrt((x_coords-center[0])**2.0+(y_coords-center[1])**2.0+(z_coords-center[2])**2.0)
-    proj_dist = np.sqrt((x_coords-center[0])**2.0+(y_coords-center[1])**2.0)
-    
-    r_proj_tot_mask = (proj_dist<R_gal)&(proj_dist>0.0)
-    N_part_tot = len(star_age_t[r_proj_tot_mask])
-    
-    r_proj_profiles = np.linspace(0.0,R_gal,100)
-    
-    #print max(proj_dist), r_proj_profiles
-    
-    N_proj_list = []
-    ratio_tot = []
-    
-    for ii in range(len(r_proj_profiles)):
-        #print r_proj_profiles[ii],r_proj_profiles[ii+1]
-        bin_mask = (proj_dist>0.0)&(proj_dist<r_proj_profiles[ii])
-        mass_select = star_mass[bin_mask]
-        age_select = star_age_t[bin_mask]
-        N_proj_list.append(len(age_select))
-        ratio_tot.append(float(len(age_select))/float(N_part_tot))
-    
-    ratio_tot = np.asarray(ratio_tot)
-    
-    diff_array = np.asarray([abs(xx-0.5) for xx in ratio_tot])
-    min_rad= r_proj_profiles[(diff_array==min(diff_array))]
-    min_diff = ratio_tot[(diff_array==min(diff_array))]
-    
-    print min_rad, min_diff
+    return T_histogram_proj_array, T_histogram_rad_array, T_histogram_proj_c_array, T_histogram_rad_c_array, total_rad_hist_c_norm, r_half_rad_hist_c_norm, square_diff_proj_list, square_diff_rad_list, square_diff_proj_c_list, square_diff_rad_c_list, radius_bins, radius_bins_proj
