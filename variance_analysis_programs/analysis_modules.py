@@ -968,16 +968,19 @@ def bin_finder_old(target_list,start,bin_size,step_size):
         final_radius_list.append(final_radius)
     return final_radius_list
 
-def bin_finder(target_list,start,bin_size,step_size,r_gal):
+def bin_finder(target_list,start,bin_size,step_size,r_gal,verbose=False):
     ###############
     # this program takes a list (array) and along with a step size
     # dumps it into bins so that they have a uniform number of particles
     # but not necessarily uniform in space
 
+    print bin_size
+
     N_tot = len(target_list)
     N_bins = int(float(N_tot))/bin_size
     
-    print 'The total number of star particles is: '+str(N_tot)+' so there should be (about) '+str(N_bins)+' bins'
+    if verbose==True:
+        print 'The total number of star particles is: '+str(N_tot)+' so there should be (about) '+str(N_bins)+' bins'
     
     r_current = start
     N_part = 0
@@ -996,9 +999,11 @@ def bin_finder(target_list,start,bin_size,step_size,r_gal):
             final_radius = r_current
             total_bin_mask = (target_list<final_radius)
             bin_number += 1
-            print 'bin number: '+str(bin_number)
-            print 'the bin is between '+str(r_prev)+' and '+str(final_radius)+' and contains '+str(N_part)+' particles.\n'
-            print 'the total number of particles is now: '+str(len(target_list[total_bin_mask]))
+            
+            if verbose==True:
+                print 'bin number: '+str(bin_number)
+                print 'the bin is between '+str(r_prev)+' and '+str(final_radius)+' and contains '+str(N_part)+' particles.\n'
+                print 'the total number of particles is now: '+str(len(target_list[total_bin_mask]))
             r_prev = r_current
             N_part = 0
             final_radius_list.append(final_radius)
@@ -1056,41 +1061,57 @@ def most_accurate_radius(hdf5_file,R_gal,R_half,center,radius_bins=None,rot_coor
 
     time_bins = np.linspace(0.0,13.7,1000)
 
+    f = h5py.File(hdf5_file)
+
     if file_type=='gizmo':
-        star_coords = f['PartType4']['Coordinates'][:]
+        star_coords_initial = f['PartType4']['Coordinates'][:]
         star_mass = f['PartType4']['Masses'][:]
-        star_vel = f['PartType4']['Velocity'][:]
+        star_vel_initial = f['PartType4']['Velocities'][:]
         star_age = f['PartType4']['StellarFormationTime'][:]
         star_ages_T = np.asarray([cosmo.age(1.0/xx - 1.0).value for xx in star_age])
 
     elif  file_type=='stars only':
-        star_coords = f['star_particle_data']['coordinates'][:]
-        star_vel = f['star_particle_data']['velocities']
+        star_coords_initial = f['star_particle_data']['coordinates'][:]
+        star_vel_initial = f['star_particle_data']['velocities']
         star_mass = f['star_particle_data']['masses'][:]
         star_ages_T = f['star_particle_data']['age_t'][:]
     else:
         print 'Unrecognized file type'
         sys.exit(1)
 
-    if rotation_coordinates != False:
+    #I need to shift the coordinates first
+    star_coords_shift = star_coords_initial-center
+
+    if rot_coordinates != False:
         assert len(rot_coordinates)==3
-        star_coords, star_vel = Rotate_to_z_axis(star_coords,star_vel,rotation_axis)
+        star_coords, star_vel = Rotate_to_z_axis(star_coords_shift,star_vel_initial,rot_coordinates)
+    else:
+        star_coords = star_coords_shift
 
     part_X = star_coords[:,0]
     part_Z = star_coords[:,2]
     part_Y = star_coords[:,1]
 
-    part_dist_proj = np.sqrt((part_X-center[0])**2.0+(part_Y-center[1])**2.0)
-    star_dist = np.sqrt((part_X-center[0])**2.0+(part_Y-center[1])**2.0+(part_Z-center[2])**2.0)
+    #part_dist_proj = np.sqrt((part_X-center[0])**2.0+(part_Y-center[1])**2.0)
+    #star_dist = np.sqrt((part_X-center[0])**2.0+(part_Y-center[1])**2.0+(part_Z-center[2])**2.0)
 
+    part_dist_proj = np.sqrt((part_X)**2.0+(part_Y)**2.0)
+    star_dist = np.sqrt((part_X)**2.0+(part_Y)**2.0+(part_Z)**2.0)
+
+    print 'The range of distances is: '+str(min(star_dist))+', '+str(max(star_dist))
+    print 'the radius is: '+str(R_gal)
+    
     total_mask = (star_dist>0.0)&(star_dist<R_gal)
     star_age_T_tot = star_ages_T[total_mask]
     star_dist_gal = star_dist[total_mask]
     star_dist_proj_gal = part_dist_proj[total_mask]
     N_tot = len(star_age_T_tot)
+    print 'particles in R_gal: '+str(N_tot)
     total_hist, total_bins = np.histogram(star_age_T_tot,bins=time_bins)
     total_hist_c = np.cumsum(total_hist)
     total_rad_hist_c_norm = total_hist_c/float(max(total_hist_c))
+
+
 
     r_half_mask = (star_dist>0.0)&(star_dist<R_half)
     star_age_T_half = star_ages_T[r_half_mask]
@@ -1106,7 +1127,7 @@ def most_accurate_radius(hdf5_file,R_gal,R_half,center,radius_bins=None,rot_coor
     square_diff_rad_list, T_histogram_rad_list = [], []
     square_diff_proj_c_list, T_histogram_proj_c_list = [], []
     square_diff_rad_c_list, T_histogram_rad_c_list = [], []
-
+    
     if radius_bins==None:
         print 'starting bin finder'
         radius_bins = bin_finder(star_dist_gal,0.0,int(float(len(star_age_T_tot))/20.0),R_half/100.0,R_gal)
@@ -1180,20 +1201,28 @@ def most_accurate_radius(hdf5_file,R_gal,R_half,center,radius_bins=None,rot_coor
 
     return T_histogram_proj_array, T_histogram_rad_array, T_histogram_proj_c_array, T_histogram_rad_c_array, total_rad_hist_c_norm, r_half_rad_hist_c_norm, square_diff_proj_list, square_diff_rad_list, square_diff_proj_c_list, square_diff_rad_c_list, radius_bins, radius_bins_proj
 
-def Rotate_to_z_axis(coordinates,velocities,rotation_axis):
+def Rotate_to_z_axis(coordinates,velocities,rotation_axis,verbose=False):
     import numpy as np
     import yt, h5py, re, os
     from math import log10
     from astropy.cosmology import FlatLambdaCDM
     from andrew_hydro_sim_modules.simple_tools import get_distance_vector, get_distance
 
+    if verbose==True:
+        print 'the vector is: '+str(rotation_axis) 
+
     L = np.sqrt(rotation_axis[0]**2.0+rotation_axis[1]**2.0+rotation_axis[2]**2.0)
     R = np.sqrt(rotation_axis[0]**2.0+rotation_axis[1]**2.0)
     R1 = np.asarray([[rotation_axis[0]/R,rotation_axis[1]/R,0.0],[-rotation_axis[1]/R,rotation_axis[0],0.0],[0.0,0.0,1.0]])
     R2 = np.asarray([[rotation_axis[2]/L,0.0,-R/L],[0.0,1.0,0.0],[R/L,0.0,rotation_axis[2]/L]])
 
-    coord_rotate = np.asarray([R2.dot(R1.dot(xx)) for xx in coordinates])
-    vel_rotate = np.asarray([R2.dot(R1.dot(xx)) for xx in velocities])
+    if R==0.0:
+        '''It is just the z-axis, no rotation required'''
+        coord_rotate=coordinates
+        vel_rotate=velocities
+    else:
+        coord_rotate = np.asarray([R2.dot(R1.dot(xx)) for xx in coordinates])
+        vel_rotate = np.asarray([R2.dot(R1.dot(xx)) for xx in velocities])
 
     return coord_rotate, vel_rotate
 
@@ -1201,39 +1230,48 @@ def find_R_half_proj(hdf5_file,R_gal,R_half,center,rot_coordinates=False,file_ty
     import numpy as np
     import h5py, re, os, sys
     from astropy.cosmology import FlatLambdaCDM
+    print 'starting r proj program'
+
     f = h5py.File(hdf5_file)
     cell_size = 2.0*R_half/10.0
 
+    cosmo = FlatLambdaCDM(H0=71.0,Om0=0.266)
+
     if file_type=='gizmo':
-        star_coords = f['PartType4']['Coordinates'][:]
+        star_coords_initial = f['PartType4']['Coordinates'][:]
         star_mass = f['PartType4']['Masses'][:]
-        star_vel = f['PartType4']['Velocity'][:]
+        star_vel_initial = f['PartType4']['Velocities'][:]
         star_age = f['PartType4']['StellarFormationTime'][:]
         star_ages_T = np.asarray([cosmo.age(1.0/xx - 1.0).value for xx in star_age])
 
-    elif  file_type=='stars only':
-        star_coords = f['star_particle_data']['coordinates'][:]
-        star_vel = f['star_particle_data']['velocities']
+    elif file_type=='stars only':
+        star_coords_initial = f['star_particle_data']['coordinates'][:]
+        star_vel_initial = f['star_particle_data']['velocities'][:]
         star_mass = f['star_particle_data']['masses'][:]
         star_ages_T = f['star_particle_data']['age_t'][:]
     else:
         print 'Unrecognized file type'
         sys.exit(1)
 
-    if rotation_coordinates != False:
-        assert len(rot_coordinates)==3
-        star_coords, star_vel = Rotate_to_z_axis(star_coords,star_vel,rotation_axis)
+    star_coords_shift = star_coords_initial-center
 
-    x_coords = star_coords[:,0]
-    y_coords = star_coords[:,1]
-    z_coords = star_coords[:,2]
-    radial_dist = np.sqrt((x_coords-center[0])**2.0+(y_coords-center[1])**2.0+(z_coords-center[2])**2.0)
-    proj_dist = np.sqrt((x_coords-center[0])**2.0+(y_coords-center[1])**2.0)
+    if rot_coordinates != False:
+        assert len(rot_coordinates)==3
+        star_coords, star_vel = Rotate_to_z_axis(star_coords_shift,star_vel_initial,rot_coordinates)
+    else:
+        star_coords = star_coords_shift
+
+    part_X = star_coords[:,0]
+    part_Z = star_coords[:,2]
+    part_Y = star_coords[:,1]
+
+    proj_dist = np.sqrt((part_X)**2.0+(part_Y)**2.0)
+    star_dist = np.sqrt((part_X)**2.0+(part_Y)**2.0+(part_Z)**2.0)
 
     r_proj_tot_mask = (proj_dist<R_gal)&(proj_dist>0.0)
-    N_part_tot = len(star_age_t[r_proj_tot_mask])
+    N_part_tot = len(star_ages_T[r_proj_tot_mask])
 
-    r_proj_profiles = np.linspace(0.0,R_gal,100)
+    r_proj_profiles = np.linspace(0.0,R_gal,500)
 
     N_proj_list = []
     ratio_tot = []
@@ -1241,7 +1279,7 @@ def find_R_half_proj(hdf5_file,R_gal,R_half,center,rot_coordinates=False,file_ty
     for ii in range(len(r_proj_profiles)):
         bin_mask = (proj_dist>0.0)&(proj_dist<r_proj_profiles[ii])
         mass_select = star_mass[bin_mask]
-        age_select = star_age_t[bin_mask]
+        age_select = star_ages_T[bin_mask]
         N_proj_list.append(len(age_select))
         ratio_tot.append(float(len(age_select))/float(N_part_tot))
 
@@ -1251,4 +1289,4 @@ def find_R_half_proj(hdf5_file,R_gal,R_half,center,rot_coordinates=False,file_ty
     min_rad= r_proj_profiles[(diff_array==min(diff_array))]
     min_diff = ratio_tot[(diff_array==min(diff_array))]
 
-    print min_rad, min_diff
+    return min_rad, min_diff
