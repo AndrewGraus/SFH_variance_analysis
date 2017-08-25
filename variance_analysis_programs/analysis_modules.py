@@ -1290,3 +1290,96 @@ def find_R_half_proj(hdf5_file,R_gal,R_half,center,rot_coordinates=False,file_ty
     min_diff = ratio_tot[(diff_array==min(diff_array))]
 
     return min_rad, min_diff
+
+def Rotate_to_z_axis(coordinates,velocities,rotation_axis,verbose=False):
+    import numpy as np
+    import yt, h5py, re, os
+    from math import log10
+    from astropy.cosmology import FlatLambdaCDM
+    from andrew_tools.simple_tools import get_distance_vector, get_distance
+
+    if verbose==True:
+        print 'the vector is: '+str(rotation_axis)
+
+    L = np.sqrt(rotation_axis[0]**2.0+rotation_axis[1]**2.0+rotation_axis[2]**2.0)
+    R = np.sqrt(rotation_axis[0]**2.0+rotation_axis[1]**2.0)
+    R1 = np.asarray([[rotation_axis[0]/R,rotation_axis[1]/R,0.0],[-rotation_axis[1]/R,rotation_axis[0],0.0],[0.0,0.0,1.0]])
+    R2 = np.asarray([[rotation_axis[2]/L,0.0,-R/L],[0.0,1.0,0.0],[R/L,0.0,rotation_axis[2]/L]])
+
+    if R==0.0:
+        '''It is just the z-axis, no rotation required'''
+        coord_rotate=coordinates
+        vel_rotate=velocities
+    else:
+        coord_rotate = np.asarray([R2.dot(R1.dot(xx)) for xx in coordinates])
+        vel_rotate = np.asarray([R2.dot(R1.dot(xx)) for xx in velocities])
+
+    return coord_rotate, vel_rotate
+
+def population_dispersion_analysis_rotation(hdf5_file,R_gal,center,age_up=22.0,age_low=6.0,rot_coordinates=False,file_type='gizmo'):
+    import numpy as np
+    import yt, h5py, re, os
+    from math import log10
+    from astropy.cosmology import FlatLambdaCDM
+    from andrew_hydro_sim_modules.simple_tools import get_distance_vector, get_distance
+
+    time_bins = np.linspace(0.0,13.7,1000)
+
+    f = h5py.File(hdf5_file)
+
+    if file_type=='gizmo':
+        part_coords = f['PartType4']['Coordinates'][:]
+        star_mass = f['PartType4']['Masses'][:]
+        part_vel = f['PartType4']['Velocity'][:]
+        star_age = f['PartType4']['StellarFormationTime'][:]
+        part_age_t = np.asarray([cosmo.age(1.0/xx - 1.0).value for xx in star_age])
+
+    elif  file_type=='stars only':
+        part_coords = f['star_particle_data']['coordinates'][:]
+        part_vel = f['star_particle_data']['velocities']
+        star_mass = f['star_particle_data']['masses'][:]
+        part_age_t = f['star_particle_data']['age_t'][:]
+    else:
+        print 'Unrecognized file type'
+        sys.exit(1)
+
+    cosmo = FlatLambdaCDM(H0=71.0,Om0=0.266,Ob0=0.0449,Neff=0.963)
+
+    star_particle_ages = np.asarray([cosmo.age(0).value-xx for xx in part_age_t])
+
+    #Now I need to add in the part where I rotate the coordinates and velocities                   
+    #Do that HERE Tomorrow                                                                          
+
+    part_coord_shift = part_coord - center
+
+    part_dist = np.sqrt((part_coord_shift[:,0])**2.0+(part_coord_shift[:,1])**2.0+(part_coord_shift[:,2])**2.0)
+    gal_mask = (part_dist<R_gal)
+
+    vel_X_gal, vel_Y_gal, vel_Z_gal = part_vel[:,0][gal_mask],part_vel[:,1][gal_mask],part_vel[:,2][gal_mask]
+    vel_gal = [np.mean(vel_X_gal),np.mean(vel_Y_gal),np.mean(vel_Z_gal)]
+
+    part_vel_shift = part_vel - vel_gal
+
+    if rot_coordinates != False:
+        assert len(rot_coordinates)==3
+        star_coords, star_vel = Rotate_to_z_axis(part_coord_shift,part_vel_shift,rot_coordinates)
+    else:
+        star_coords = part_coord_shift
+        star_vel = part_vel_shift
+
+        RSG_mask = (part_dist<R_gal)&(star_particle_ages<age_up/1000.0)&(star_particle_ages>age_low/1000.0)
+
+    RSG_vel = star_vel[RSG_mask]
+    RSG_coords = star_coords[RSG_mask]
+    RSG_part_dist = part_dist[RSG_mask]
+
+    #print 'number of RSG hosts: '+str(len(RSG_coords))                                              
+
+    gal_vel = part_vel[gal_mask]
+    gal_coords = part_coord[gal_mask]
+    gal_part_dist = part_dist[gal_mask]
+
+    vel_disp = np.std(gal_vel[:,2])
+    vel_disp_RSG = np.std(RSG_vel[:,2])
+
+    return vel_disp, vel_disp_RSG
