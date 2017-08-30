@@ -1292,6 +1292,20 @@ def find_R_half_proj(hdf5_file,R_gal,R_half,center,rot_coordinates=False,file_ty
     return min_rad, min_diff
 
 def Rotate_to_z_axis(coordinates,velocities,rotation_axis,verbose=False):
+    #########################                                                                                                          
+    #                                                                                                                                  
+    # The purpose of this program is to take into account                                                                              
+    # coordinates and velocities.                                                                                                      
+    # NOTE: This requires the coordinates and velocities to                                                                            
+    # be shifted to the center of the galaxy and the                                                                                   
+    # center velocity of the galaxy                                                                                                    
+    #                                                                                                                                  
+    # parameters:                                                                                                                      
+    # coordinates - the shifted coordinates                                                                                            
+    # velocity - the shifted velocities                                                                                                
+    # rotation_axis - the normalized vector that is to be the new z - axis                                                             
+    # verbose - just prints some stuff 
+
     import numpy as np
     import yt, h5py, re, os
     from math import log10
@@ -1317,6 +1331,17 @@ def Rotate_to_z_axis(coordinates,velocities,rotation_axis,verbose=False):
     return coord_rotate, vel_rotate
 
 def population_dispersion_analysis_rotation(hdf5_file,R_gal,center,age_up=22.0,age_low=6.0,rot_coordinates=False,file_type='gizmo'):
+    #This takes in a h5py file an age range and an mass range and calculates the kinematics of that population                         
+    #of stars given a range of rotation axes                                                                                           
+    #                                                                                                                                  
+    # parameters:                                                                                                                      
+    # hdf5_file - the file that has the particle data in it                                                                                                                        
+    # R_gal - the radius in which we should gather particles
+    # age_up - the upper_limit of star particle ages to grab
+    # age_low - the youngest star particles to grab
+    # rot_coordinates - the vector that should be the z axis for this analysis
+    # file_type - what kind of file the hdf5 file should be
+    
     import numpy as np
     import yt, h5py, re, os
     from math import log10
@@ -1383,3 +1408,73 @@ def population_dispersion_analysis_rotation(hdf5_file,R_gal,center,age_up=22.0,a
     vel_disp_RSG = np.std(RSG_vel[:,2])
 
     return vel_disp, vel_disp_RSG
+
+def grab_particles_RGB_theoretical(hdf5_file,R_gal,center,age_up=22.0,age_low=6.0,rot_coordinates=False,file_type='gizmo'):
+    #given the interpolated particle files
+    #assign a probability to each particle
+    #then we need to iterate over and see exactly how many particles
+    #host an RGB 
+
+    import numpy as np
+    import yt, h5py, re, os
+    from math import log10
+    from astropy.cosmology import FlatLambdaCDM
+    from andrew_hydro_sim_modules.simple_tools import get_distance_vector, get_distance
+    from scipy.interpolate import interp1d
+
+    time_bins = np.linspace(0.0,13.7,1000)
+
+    f = h5py.File(hdf5_file)
+
+    if file_type=='gizmo':
+        part_coords = f['PartType4']['Coordinates'][:]
+        star_mass = f['PartType4']['Masses'][:]
+        part_vel = f['PartType4']['Velocity'][:]
+        star_age = f['PartType4']['StellarFormationTime'][:]
+        star_IDs = f['PartType4']['ParticleIDs'][:]
+        part_age_t = np.asarray([cosmo.age(1.0/xx - 1.0).value for xx in star_age])
+
+    elif  file_type=='stars only':
+        part_coords = f['star_particle_data']['coordinates'][:]
+        part_vel = f['star_particle_data']['velocities']
+        star_mass = f['star_particle_data']['masses'][:]
+        part_age_t = f['star_particle_data']['age_t'][:]
+    else:
+        print 'Unrecognized file type'
+        sys.exit(1)
+
+    cosmo = FlatLambdaCDM(H0=71.0,Om0=0.266,Ob0=0.0449,Neff=0.963)
+
+    part_coords_shift = part_coords-center
+
+    star_particle_ages = np.asarray([cosmo.age(0).value-xx for xx in part_age_t])
+    
+    MC_matrix_high_bright = np.asarray([[0.7567567567567566, 0.05762802275960166],
+                                        [1.5135135135135132, 0.22851469890943577],
+                                        [3.513513513513513, 0.33070768136557616],
+                                        [5.513513513513514, 0.15921645329540068],
+                                        [7.513513513513514, 0.11140943575154105],
+                                        [9.513513513513514, 0.06886557610241817],
+                                        [11.513513513513514, 0.031584874348032255]])
+
+    #This is from the -2.5 to -1.5 bin with the Z = 0.015 normalized to the individual metallicity bin
+    MC_matrix_high_faint = np.asarray([[0.7567567567567437, 0.04851048664271207],
+                                       [1.486486486486477, 0.2921257420715513],
+                                       [3.5135135135134874, 0.15332418762693328],
+                                       [5.486486486486449, 0.1211719848461178],
+                                       [7.513513513513466, 0.10115655756912983],
+                                       [9.513513513513455, 0.10108430323386972],
+                                       [11.513513513513441, 0.0940756327136385]])
+
+    MC_bright_interp = interp1d(MC_matrix_high_bright[:,0],MC_matrix_high_bright[:,1])
+    MC_faint_interp = interp1d(MC_matrix_high_faint[:,0],MC_matrix_high_faint[:,1])
+    
+    star_probability_bright = np.asarray([MC_bright_interp(xx) for xx in star_particle_ages])
+    star_probability_faint = np.asarray([MC_faint_interp(xx) for xx in star_particle_ages])
+    #RGB_host_bright = np.asarray([1 if random.random() < xx else 0 for xx in star_probability_bright])
+    #RGB_host_faint = np.asarray([1 if random.random() < xx else 0 for xx in star_probability_faint])
+
+    #bright_mask = (RGB_host_bright==1)
+    #faint_mask = (RGB_host_faint==1)
+    #both_mask = (RGB_host_bright==1)OR(RGB_host_faint==1)
+    return star_probability_bright, star_probability_faint, star_IDs
